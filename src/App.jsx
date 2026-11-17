@@ -7,13 +7,14 @@ import IndoorModel from './components/IndoorModel';
 import CommunityMap from './components/CommunityMap';
 import AgentLog from './components/AgentLog';
 import Onboarding from './components/Onboarding';
+import LandingPage from './components/LandingPage';
 import { forecastAQI, estimateIndoorPM25 } from './core/aqi-forecast.js';
 import { attributeSources } from './core/source-attribution.js';
 import { simulateIndoor, optimizeVentilation } from './core/indoor-physics.js';
 import { strategistAgent } from './agents/strategist.agent.js';
 
 function App() {
-  const [step, setStep] = useState('onboarding');
+  const [step, setStep] = useState('landing');
   const [location, setLocation] = useState({ lat: 28.6139, lon: 77.2090, pincode: '110001' });
   const [building, setBuilding] = useState({
     floor: 3, area: 80, window_bedroom: false, window_living: false,
@@ -106,6 +107,14 @@ function App() {
     setSchedule(data.schedule);
     setStep('dashboard');
   };
+
+  const handleLandingComplete = () => {
+    setStep('onboarding');
+  };
+
+  if (step === 'landing') {
+    return <LandingPage onGetStarted={handleLandingComplete} />;
+  }
 
   if (step === 'onboarding') {
     return <Onboarding onComplete={handleOnboardingComplete} />;
