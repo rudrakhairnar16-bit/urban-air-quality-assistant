@@ -49,10 +49,19 @@ export const scoutAgent = {
   },
 
   async fetchOpenWeather(lat, lon) {
-    const key = localStorage.getItem('owm_key') || 'demo';
-    const resp = await fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${key}`);
-    if (!resp.ok) throw new Error(`OWM ${resp.status}`);
-    return resp.json();
+    const key = import.meta.env.VITE_OWM_KEY || localStorage.getItem('owm_key') || 'afed74bce9e1c18e2f4bf7aba34ec695';
+    const [airResp, weatherResp] = await Promise.allSettled([
+      fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${key}`),
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${key}&units=metric`)
+    ]);
+    const airData = airResp.status === 'fulfilled' && airResp.value.ok ? await airResp.value.json() : null;
+    const weatherData = weatherResp.status === 'fulfilled' && weatherResp.value.ok ? await weatherResp.value.json() : null;
+    return {
+      ...(airData || {}),
+      main: weatherData?.main,
+      wind: weatherData?.wind,
+      weather: weatherData?.weather
+    };
   },
 
   async fetchSentinel5P(lat, lon) {

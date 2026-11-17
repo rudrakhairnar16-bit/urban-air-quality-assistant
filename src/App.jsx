@@ -40,6 +40,31 @@ function App() {
     setLoading(true); setError(null);
     try {
       const history = generateSyntheticHistory();
+
+      // Attempt live OpenWeather ingestion
+      try {
+        const key = import.meta.env.VITE_OWM_KEY || localStorage.getItem('owm_key') || 'afed74bce9e1c18e2f4bf7aba34ec695';
+        const [airResp, weatherResp] = await Promise.allSettled([
+          fetch(`https://api.openweathermap.org/data/2.5/air_pollution?lat=${location.lat}&lon=${location.lon}&appid=${key}`),
+          fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&appid=${key}&units=metric`)
+        ]);
+        const airJson = airResp.status === 'fulfilled' && airResp.value.ok ? await airResp.value.json() : null;
+        const weatherJson = weatherResp.status === 'fulfilled' && weatherResp.value.ok ? await weatherResp.value.json() : null;
+        if (airJson?.list?.[0]?.components) {
+          const comp = airJson.list[0].components;
+          const liveLatest = history[history.length - 1];
+          if (comp.pm2_5) liveLatest.pm25 = Math.round(comp.pm2_5);
+          if (comp.pm10) liveLatest.pm10 = Math.round(comp.pm10);
+          if (weatherJson?.main?.temp) liveLatest.temp = Math.round(weatherJson.main.temp);
+          if (weatherJson?.main?.humidity) liveLatest.humidity = Math.round(weatherJson.main.humidity);
+          if (weatherJson?.wind?.speed) liveLatest.wind_speed = Math.round(weatherJson.wind.speed * 10) / 10;
+          if (weatherJson?.wind?.deg) liveLatest.wind_dir = weatherJson.wind.deg;
+          if (weatherJson?.main?.pressure) liveLatest.pressure = weatherJson.main.pressure;
+        }
+      } catch (err) {
+        console.warn('Live API fetch fallback to synthetic:', err);
+      }
+
       const forecast = await forecastAQI(history);
       const latest = history[history.length - 1];
       const attribution = attributeSources({
