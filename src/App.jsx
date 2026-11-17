@@ -10,10 +10,10 @@ import Onboarding from './components/Onboarding';
 import { forecastAQI, estimateIndoorPM25 } from './core/aqi-forecast.js';
 import { attributeSources } from './core/source-attribution.js';
 import { simulateIndoor, optimizeVentilation } from './core/indoor-physics.js';
-import { createNudgeEngine } from './core/behavioral-engine.js';
+import { strategistAgent } from './agents/strategist.agent.js';
 
 function App() {
-  const [step, setStep] = useState('onboarding'); // onboarding -> dashboard
+  const [step, setStep] = useState('onboarding');
   const [location, setLocation] = useState({ lat: 28.6139, lon: 77.2090, pincode: '110001' });
   const [building, setBuilding] = useState({
     floor: 3, area: 80, window_bedroom: false, window_living: false,
@@ -56,21 +56,11 @@ function App() {
       setAnalysis(analysisResult);
       localStorage.setItem('aq_analysis', JSON.stringify(analysisResult));
 
-      // Run strategist logic inline (Antigravity agent would do this)
-      const nudge = createNudgeEngine(profile.userId);
-      const interventions = nudge.selectInterventions({
-        hour: new Date().getHours(), aqi: forecast[0]?.aqi || 150,
-        has_children: profile.hasChildren, price_sensitive: profile.priceSensitive,
-        community_active: profile.communityActive
-      }, 5);
-
-      const routine = buildRoutine(interventions, analysisResult, building, profile);
-      const personalImpact = calculatePersonalImpact(routine, analysisResult, building);
-      const neighborhood = simulateNeighborhoodImpact(analysisResult, interventions, location);
-
-      const strategyResult = { routine, personalImpact, neighborhoodImpact: neighborhood, nudges: interventions, insights: nudge.getInsights() };
-      setStrategy(strategyResult);
-      localStorage.setItem('aq_strategy', JSON.stringify(strategyResult));
+      const strategyResult = await strategistAgent.execute({
+        analysis: analysisResult, building, profile, location
+      });
+      setStrategy(strategyResult.strategy);
+      localStorage.setItem('aq_strategy', JSON.stringify(strategyResult.strategy));
 
     } catch (e) {
       setError(e.message);
@@ -125,7 +115,6 @@ function App() {
   );
 }
 
-// Helper functions (would be in Antigravity agents)
 function generateSyntheticHistory() {
   const now = new Date();
   const history = [];
@@ -143,32 +132,6 @@ function generateSyntheticHistory() {
     });
   }
   return history;
-}
-
-function buildRoutine(interventions, analysis, building, profile) {
-  const routine = [];
-  const commute = interventions.find(i => i.category === 'transport');
-  if (commute) routine.push({ time: '06:30–09:30', category: 'transport', title: commute.id.replace('_', ' '), description: `Traffic = ${analysis.attribution.traffic?.fraction || 30}% of PM2.5`, impact: commute.impact, icon: '🚌', relevant: true });
-  routine.push({ time: '07:00', category: 'home', title: 'Smart Ventilation', description: `Best window: ${analysis.ventilation.living.start}:00–${analysis.ventilation.living.end}:00`, impact: { pm25_ug: 20 }, icon: '🪟', relevant: true });
-  if (building.purifier_cadr) routine.push({ time: '11:00–15:00', category: 'home', title: 'Purifier ON High', description: `Projected indoor: ${analysis.indoor.summary.living.pm25_max} µg/m³`, impact: { pm25_ug: 60 }, icon: '🌬️', relevant: true });
-  const cooking = interventions.find(i => i.id.includes('cooking'));
-  if (cooking) routine.push({ time: '13:00 & 19:00', category: 'home', title: cooking.id.replace('_', ' '), description: 'Exhaust fan + window 15min', impact: cooking.impact, icon: '🍳', relevant: true });
-  routine.push({ time: '22:00', category: 'home', title: 'Bedroom Sealed + Purifier', description: `Target: <15 µg/m³ (WHO)`, impact: { pm25_ug: 40 }, icon: '🛏️', relevant: true });
-  return routine.map((r, i) => ({ ...r, id: `routine_${i}` }));
-}
-
-function calculatePersonalImpact(routine, analysis, building) {
-  const total = routine.reduce((sum, r) => {
-    if (!r.impact) return sum;
-    return { co2_kg: sum.co2_kg + (r.impact.co2_kg || 0), pm25_ug: sum.pm25_ug + (r.impact.pm25_ug || 0), cost_save: sum.cost_save + (r.impact.cost_save || 0) };
-  }, { co2_kg: 0, pm25_ug: 0, cost_save: 0 });
-  const indoorBaseline = analysis.indoor.summary.bedroom.pm25_avg;
-  const indoorFinal = Math.max(5, indoorBaseline - total.pm25_ug * 0.3);
-  return { daily: total, weekly: { co2_kg: total.co2_kg * 7, pm25_ug: total.pm25_ug * 7, cost_save: total.cost_save * 7 }, indoor_reduction: Math.round((indoorBaseline - indoorFinal) / indoorBaseline * 100), indoor_final: indoorFinal };
-}
-
-function simulateNeighborhoodImpact(analysis, interventions, location) {
-  return { avg_reduction: 12.5, people_benefited: 340, total_population: 2800 };
 }
 
 function SourceAttribution({ attribution }) {
