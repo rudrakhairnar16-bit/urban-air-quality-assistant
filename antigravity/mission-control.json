@@ -1,0 +1,87 @@
+{
+  "version": "1.0",
+  "project": "urban-air-quality-assistant",
+  "agents": [
+    {
+      "id": "scout",
+      "file": "src/agents/scout.agent.js",
+      "schedule": "*/15 * * * *",
+      "persistence": "background",
+      "dependencies": [],
+      "outputs": ["aq_latest", "aq_history"],
+      "triggers": ["time"]
+    },
+    {
+      "id": "analyst",
+      "file": "src/agents/analyst.agent.js",
+      "schedule": "on_demand",
+      "persistence": "ephemeral",
+      "dependencies": ["scout"],
+      "inputs": ["aq_history", "building", "schedule", "location"],
+      "outputs": ["aq_analysis"],
+      "triggers": ["user_request", "scout_complete"]
+    },
+    {
+      "id": "strategist",
+      "file": "src/agents/strategist.agent.js",
+      "schedule": "on_demand",
+      "persistence": "ephemeral",
+      "dependencies": ["analyst"],
+      "inputs": ["aq_analysis", "building", "profile", "location"],
+      "outputs": ["aq_strategy"],
+      "triggers": ["analyst_complete"]
+    },
+    {
+      "id": "nudge",
+      "file": "src/agents/nudge.agent.js",
+      "schedule": "0 6 * * *",
+      "persistence": "background",
+      "dependencies": ["strategist"],
+      "inputs": ["userId", "profile", "currentAQI"],
+      "outputs": ["nudge_daily", "nudge_prefs"],
+      "triggers": ["time", "user_response"]
+    },
+    {
+      "id": "sentinel",
+      "file": "src/agents/sentinel.agent.js",
+      "schedule": "*/5 6-22 * * *",
+      "persistence": "background",
+      "dependencies": ["scout"],
+      "inputs": ["userId", "thresholds", "location"],
+      "outputs": ["sentinel_alert", "sentinel_log"],
+      "triggers": ["time"]
+    },
+    {
+      "id": "contributor",
+      "file": "src/agents/contributor.agent.js",
+      "schedule": "0 3 * * *",
+      "persistence": "background",
+      "dependencies": ["analyst"],
+      "inputs": ["userId", "location", "optIn"],
+      "outputs": ["contrib_queue"],
+      "triggers": ["time"]
+    }
+  ],
+  "orchestration": {
+    "entry_point": "scout",
+    "flow": [
+      "scout -> analyst -> strategist",
+      "strategist -> nudge",
+      "scout -> sentinel",
+      "analyst -> contributor"
+    ],
+    "parallel": ["nudge", "sentinel", "contributor"]
+  },
+  "data_stores": {
+    "aq_latest": { "ttl": 1800000, "source": "scout" },
+    "aq_history": { "max_entries": 200, "source": "scout" },
+    "aq_analysis": { "ttl": 3600000, "source": "analyst" },
+    "aq_strategy": { "ttl": 86400000, "source": "strategist" },
+    "aq_indoor_actual": { "ttl": 86400000, "source": "user_input" }
+  },
+  "configuration": {
+    "model_path": "/models/aqi-forecast/",
+    "api_keys": { "openweather": "env:OWM_KEY", "cpcb": "env:CPCB_KEY" },
+    "privacy": { "anon_grid_km": 1, "min_k": 50, "pii_fields": [] }
+  }
+}

@@ -1,0 +1,190 @@
+import { useState, useEffect, useCallback } from 'react';
+import Header from './components/Header';
+import AQIDashboard from './components/AQIDashboard';
+import RoutinePanel from './components/RoutinePanel';
+import ImpactTracker from './components/ImpactTracker';
+import IndoorModel from './components/IndoorModel';
+import CommunityMap from './components/CommunityMap';
+import AgentLog from './components/AgentLog';
+import Onboarding from './components/Onboarding';
+import { forecastAQI, estimateIndoorPM25 } from './core/aqi-forecast.js';
+import { attributeSources } from './core/source-attribution.js';
+import { simulateIndoor, optimizeVentilation } from './core/indoor-physics.js';
+import { createNudgeEngine } from './core/behavioral-engine.js';
+
+function App() {
+  const [step, setStep] = useState('onboarding'); // onboarding -> dashboard
+  const [location, setLocation] = useState({ lat: 28.6139, lon: 77.2090, pincode: '110001' });
+  const [building, setBuilding] = useState({
+    floor: 3, area: 80, window_bedroom: false, window_living: false,
+    window_kitchen: true, exhaust_kitchen: true, exhaust_bathroom: true,
+    purifier_cadr: 300, purifier_zone: 'bedroom', door_open: true,
+    occupancy: 3, cookingFreq: 2, incense: false
+  });
+  const [profile, setProfile] = useState({
+    userId: 'user_' + Math.random().toString(36).slice(2),
+    hasChildren: false, priceSensitive: true, communityActive: false, canWfh: true
+  });
+  const [schedule, setSchedule] = useState([
+    { zone: 'kitchen', activity: 'cooking', start_hour: 8, duration: 1 },
+    { zone: 'kitchen', activity: 'cooking', start_hour: 19, duration: 1.5 }
+  ]);
+  const [analysis, setAnalysis] = useState(null);
+  const [strategy, setStrategy] = useState(null);
+  const [indoorActual, setIndoorActual] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('routine');
+
+  const runAnalysis = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const history = generateSyntheticHistory();
+      const forecast = await forecastAQI(history);
+      const latest = history[history.length - 1];
+      const attribution = attributeSources({
+        ...latest, hour: new Date().getHours(), month: new Date().getMonth() + 1,
+        ec: latest.pm25 * 0.12, oc: latest.pm25 * 0.35, so4: latest.pm25 * 0.15,
+        no3: latest.pm25 * 0.1, nh4: latest.pm25 * 0.12, k: latest.pm25 * 0.05,
+        cl: latest.pm25 * 0.03, ca: latest.pm25 * 0.08, fe: latest.pm25 * 0.04
+      });
+      const outdoor = forecast.map(f => ({ pm25: f.pm25, pm10: f.pm10, co2: 420, voc: 10 }));
+      const indoor = simulateIndoor(outdoor, building, schedule);
+      const ventilation = optimizeVentilation(outdoor, building);
+
+      const analysisResult = { forecast, attribution, indoor, ventilation, location, timestamp: Date.now() };
+      setAnalysis(analysisResult);
+      localStorage.setItem('aq_analysis', JSON.stringify(analysisResult));
+
+      // Run strategist logic inline (Antigravity agent would do this)
+      const nudge = createNudgeEngine(profile.userId);
+      const interventions = nudge.selectInterventions({
+        hour: new Date().getHours(), aqi: forecast[0]?.aqi || 150,
+        has_children: profile.hasChildren, price_sensitive: profile.priceSensitive,
+        community_active: profile.communityActive
+      }, 5);
+
+      const routine = buildRoutine(interventions, analysisResult, building, profile);
+      const personalImpact = calculatePersonalImpact(routine, analysisResult, building);
+      const neighborhood = simulateNeighborhoodImpact(analysisResult, interventions, location);
+
+      const strategyResult = { routine, personalImpact, neighborhoodImpact: neighborhood, nudges: interventions, insights: nudge.getInsights() };
+      setStrategy(strategyResult);
+      localStorage.setItem('aq_strategy', JSON.stringify(strategyResult));
+
+    } catch (e) {
+      setError(e.message);
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [building, schedule, profile, location]);
+
+  useEffect(() => {
+    if (step === 'dashboard') runAnalysis();
+  }, [step, runAnalysis]);
+
+  const handleOnboardingComplete = (data) => {
+    setLocation(data.location);
+    setBuilding(data.building);
+    setProfile(data.profile);
+    setSchedule(data.schedule);
+    setStep('dashboard');
+  };
+
+  if (step === 'onboarding') {
+    return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  return (
+    <div className="app">
+      <Header location={location} onLocationChange={setLocation} />
+      <main className="main">
+        <aside>
+          <AQIDashboard analysis={analysis} loading={loading} error={error} onRefresh={runAnalysis} />
+          <IndoorModel indoor={analysis?.indoor} building={building} onBuildingChange={setBuilding} />
+          <AgentLog />
+        </aside>
+        <section>
+          <div className="tabs">
+            <button className={`tab ${activeTab === 'routine' ? 'active' : ''}`} onClick={() => setActiveTab('routine')}>📋 Routine</button>
+            <button className={`tab ${activeTab === 'impact' ? 'active' : ''}`} onClick={() => setActiveTab('impact')}>📊 Impact</button>
+            <button className={`tab ${activeTab === 'community' ? 'active' : ''}`} onClick={() => setActiveTab('community')}>👥 Community</button>
+            <button className={`tab ${activeTab === 'sources' ? 'active' : ''}`} onClick={() => setActiveTab('sources')}>🔬 Sources</button>
+          </div>
+          {activeTab === 'routine' && <RoutinePanel routine={strategy?.routine} nudges={strategy?.nudges} onLogActual={setIndoorActual} />}
+          {activeTab === 'impact' && <ImpactTracker impact={strategy?.personalImpact} neighborhood={strategy?.neighborhoodImpact} />}
+          {activeTab === 'community' && <CommunityMap neighborhood={strategy?.neighborhoodImpact} location={location} />}
+          {activeTab === 'sources' && analysis && <SourceAttribution attribution={analysis.attribution} />}
+        </section>
+      </main>
+      <footer className="footer">
+        Built with <strong>Antigravity</strong> Agent Swarm • <a href="#" target="_blank">GitHub</a> • <a href="#" target="_blank">Demo</a>
+      </footer>
+    </div>
+  );
+}
+
+// Helper functions (would be in Antigravity agents)
+function generateSyntheticHistory() {
+  const now = new Date();
+  const history = [];
+  for (let i = 71; i >= 0; i--) {
+    const hour = (now.getHours() - i + 24) % 24;
+    const base = 80 + 40 * Math.sin((hour - 6) * Math.PI / 12);
+    history.push({
+      pm25: Math.max(10, base + (Math.random() - 0.5) * 20),
+      pm10: Math.max(15, base * 1.4 + (Math.random() - 0.5) * 30),
+      temp: 22 + 5 * Math.sin((hour - 6) * Math.PI / 12),
+      humidity: 50 + 20 * Math.cos((hour - 6) * Math.PI / 12),
+      wind_speed: 1 + Math.random() * 3,
+      wind_dir: 180 + (Math.random() - 0.5) * 90,
+      pressure: 1013 + (Math.random() - 0.5) * 10
+    });
+  }
+  return history;
+}
+
+function buildRoutine(interventions, analysis, building, profile) {
+  const routine = [];
+  const commute = interventions.find(i => i.category === 'transport');
+  if (commute) routine.push({ time: '06:30–09:30', category: 'transport', title: commute.id.replace('_', ' '), description: `Traffic = ${analysis.attribution.traffic?.fraction || 30}% of PM2.5`, impact: commute.impact, icon: '🚌', relevant: true });
+  routine.push({ time: '07:00', category: 'home', title: 'Smart Ventilation', description: `Best window: ${analysis.ventilation.living.start}:00–${analysis.ventilation.living.end}:00`, impact: { pm25_ug: 20 }, icon: '🪟', relevant: true });
+  if (building.purifier_cadr) routine.push({ time: '11:00–15:00', category: 'home', title: 'Purifier ON High', description: `Projected indoor: ${analysis.indoor.summary.living.pm25_max} µg/m³`, impact: { pm25_ug: 60 }, icon: '🌬️', relevant: true });
+  const cooking = interventions.find(i => i.id.includes('cooking'));
+  if (cooking) routine.push({ time: '13:00 & 19:00', category: 'home', title: cooking.id.replace('_', ' '), description: 'Exhaust fan + window 15min', impact: cooking.impact, icon: '🍳', relevant: true });
+  routine.push({ time: '22:00', category: 'home', title: 'Bedroom Sealed + Purifier', description: `Target: <15 µg/m³ (WHO)`, impact: { pm25_ug: 40 }, icon: '🛏️', relevant: true });
+  return routine.map((r, i) => ({ ...r, id: `routine_${i}` }));
+}
+
+function calculatePersonalImpact(routine, analysis, building) {
+  const total = routine.reduce((sum, r) => {
+    if (!r.impact) return sum;
+    return { co2_kg: sum.co2_kg + (r.impact.co2_kg || 0), pm25_ug: sum.pm25_ug + (r.impact.pm25_ug || 0), cost_save: sum.cost_save + (r.impact.cost_save || 0) };
+  }, { co2_kg: 0, pm25_ug: 0, cost_save: 0 });
+  const indoorBaseline = analysis.indoor.summary.bedroom.pm25_avg;
+  const indoorFinal = Math.max(5, indoorBaseline - total.pm25_ug * 0.3);
+  return { daily: total, weekly: { co2_kg: total.co2_kg * 7, pm25_ug: total.pm25_ug * 7, cost_save: total.cost_save * 7 }, indoor_reduction: Math.round((indoorBaseline - indoorFinal) / indoorBaseline * 100), indoor_final: indoorFinal };
+}
+
+function simulateNeighborhoodImpact(analysis, interventions, location) {
+  return { avg_reduction: 12.5, people_benefited: 340, total_population: 2800 };
+}
+
+function SourceAttribution({ attribution }) {
+  return (
+    <div className="card">
+      <h2>🔬 Source Attribution</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {Object.entries(attribution).map(([source, data]) => (
+          <div key={source} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', background: '#0f172a', borderRadius: '8px' }}>
+            <span style={{ textTransform: 'capitalize' }}>{source.replace('_', ' ')}</span>
+            <span style={{ fontWeight: 700, color: '#22d3ee' }}>{data.fraction}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default App;
