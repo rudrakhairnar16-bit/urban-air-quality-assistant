@@ -22,9 +22,15 @@ export const contributorAgent = {
     if (!analysis || !indoor) return { success: true, skipped: 'no_data' };
 
     const payload = this.anonymize(analysis, indoor, location);
+    // Always queue locally for demo/offline-first
+    const queue = JSON.parse(localStorage.getItem('contrib_queue') || '[]');
+    queue.push({ ...payload, ts: Date.now(), retries: 0 });
+    localStorage.setItem('contrib_queue', JSON.stringify(queue.slice(-50)));
+
+    // Try to submit
     await this.submit(payload);
 
-    return { success: true, submitted: true };
+    return { success: true, submitted: true, queued: true };
   },
 
   anonymize(analysis, indoor, location) {
@@ -40,6 +46,8 @@ export const contributorAgent = {
     };
 
     return {
+      grid_lat: gridLat,
+      grid_lon: gridLon,
       grid: `${gridLat},${gridLon}`,
       timestamp: Date.now(),
       outdoor_pm25: analysis.forecast[0]?.pm25,
@@ -48,7 +56,8 @@ export const contributorAgent = {
       penetration_factor: summary.bedroom.pm25_avg / (analysis.forecast[0]?.pm25 || 1),
       building_type: this.inferBuildingType({ summary }),
       ventilation_pattern: this.inferVentilation({ summary }),
-      has_purifier: summary.bedroom.pm25_avg < analysis.forecast[0]?.pm25 * 0.3
+      has_purifier: summary.bedroom.pm25_avg < analysis.forecast[0]?.pm25 * 0.3,
+      k_anonymity: 50 // minimum per mission-control.json
     };
   },
 

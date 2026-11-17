@@ -17,15 +17,19 @@ export const analystAgent = {
   tools: ['localStorage', 'compute'],
 
   async execute(context) {
-    const { building, schedule, location } = context;
-    const history = this.prepareHistory(context.history);
-    const latest = this.getLatest(context.history);
+    const { building, schedule, location, history: contextHistory } = context;
+    const storedHistory = contextHistory || JSON.parse(localStorage.getItem('aq_history') || '[]');
+    const history = this.prepareHistory(storedHistory);
+    const latest = this.getLatest(storedHistory);
 
-    const [forecast, attribution, indoor, ventilation] = await Promise.all([
-      forecastAQI(history),
+    // Forecast first (needed for indoor/ventilation)
+    const forecast = await forecastAQI(history);
+    const outdoor = this.prepareOutdoor(forecast);
+
+    const [attribution, indoor, ventilation] = await Promise.all([
       attributeSources(this.prepareAttributionInput(latest)),
-      simulateIndoor(this.prepareOutdoor(forecast), building, schedule),
-      optimizeVentilation(this.prepareOutdoor(forecast), building)
+      simulateIndoor(outdoor, building, schedule),
+      optimizeVentilation(outdoor, building)
     ]);
 
     const mitigations = {};
