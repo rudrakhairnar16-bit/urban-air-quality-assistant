@@ -134,7 +134,7 @@ function App() {
         </section>
       </main>
       <footer className="footer">
-        Built with <strong>Antigravity</strong> Agent Swarm • <a href="#" target="_blank">GitHub</a> • <a href="#" target="_blank">Demo</a>
+        Built with <strong>Antigravity</strong> Agent Swarm • <a href="https://github.com/rudrakhairnar16-bit/urban-air-quality-assistant" target="_blank" rel="noreferrer">GitHub</a> • <a href="https://air-quality-assistant.vercel.app" target="_blank" rel="noreferrer">Demo</a>
       </footer>
     </div>
   );

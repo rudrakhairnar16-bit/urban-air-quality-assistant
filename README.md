@@ -50,7 +50,7 @@ npm run test    # Run all tests (vitest)
 
 - **Public GitHub Repo**: <10 MB (models lazy-loaded from CDN)
 - **Single Branch**: `main`
-- **Live Preview**: Deploy `dist/` to Vercel/Netlify/Cloudflare Pages
+- **Live Preview**: https://air-quality-assistant.vercel.app
 - **Video**: 4-min walkthrough showing live data entry, Antigravity agents, edge cases
 - **LinkedIn**: "Build in Public" post with technical narrative
 
