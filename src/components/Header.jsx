@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { IconMapPin, IconWind, IconActivity } from './Icons';
 
 export default function Header({ location, onLocationChange }) {
   const [pincode, setPincode] = useState(location.pincode || '');
@@ -21,28 +22,40 @@ export default function Header({ location, onLocationChange }) {
     }
   };
 
-  const aqi = location.currentAQI;
-  const aqiClass = aqi ? (aqi <= 50 ? 'aqi-good' : aqi <= 100 ? 'aqi-moderate' : aqi <= 200 ? 'aqi-unhealthy' : aqi <= 300 ? 'aqi-severe' : 'aqi-severe') : '';
-
   return (
-    <header className="header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <h1>🌬️ Urban Air Quality Assistant</h1>
-        {aqi && <span className={`aqi-badge ${aqiClass}`}>AQI {aqi}</span>}
+    <header className="linear-navbar">
+      <div className="brand-badge">
+        <div className="brand-logo-glow">
+          <IconWind size={18} color="#07090e" />
+        </div>
+        <div>
+          <div className="brand-title">
+            AirQuality <span style={{ color: 'var(--accent-cyan)' }}>Assistant</span>
+            <span className="brand-tag">ANTIGRAVITY V1.0</span>
+          </div>
+        </div>
       </div>
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <input
-          type="text"
-          placeholder="PIN code (e.g., 110001)"
-          value={pincode}
-          onChange={e => setPincode(e.target.value)}
-          style={{ width: '140px', padding: '0.5rem 0.75rem' }}
-          maxLength={6}
-        />
-        <button type="submit" className="btn btn-primary" disabled={searching} style={{ padding: '0.5rem 1rem' }}>
-          {searching ? '🔍' : 'Locate'}
-        </button>
-      </form>
+
+      <div className="nav-actions">
+        <form onSubmit={handleSearch} className="search-input-pill">
+          <IconMapPin size={15} color="var(--accent-cyan)" />
+          <input
+            type="text"
+            placeholder="PIN (110001)"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            maxLength={6}
+          />
+          <button type="submit" className="btn-linear btn-linear-secondary" disabled={searching} style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', borderRadius: '999px' }}>
+            {searching ? '...' : 'Track'}
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.03)', padding: '0.35rem 0.75rem', borderRadius: '999px', border: '1px solid var(--border-subtle)' }}>
+          <IconActivity size={13} color="var(--accent-emerald)" />
+          <span>Delhi NCR</span>
+        </div>
+      </div>
     </header>
   );
 }
