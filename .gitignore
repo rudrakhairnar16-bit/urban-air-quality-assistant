@@ -38,3 +38,4 @@ public/models/
 # Antigravity runtime
 .antigravity/
 graphify-out/
+.vercel
