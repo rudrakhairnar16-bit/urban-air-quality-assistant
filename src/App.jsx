@@ -23,6 +23,14 @@ import {
 } from './components/Icons';
 
 function App() {
+  // Clear stale session so LandingPage shows first (enables Demo Dashboard button)
+  useEffect(() => {
+    if (localStorage.getItem('aq_demo_seen') !== '1') {
+      localStorage.clear();
+      localStorage.setItem('aq_demo_seen', '1');
+    }
+  }, []);
+
   const [step, setStep] = useState('landing');
   const [viewMode, setViewMode] = useState('tabs'); // 'tabs' | 'bento'
   const [location, setLocation] = useState({ lat: 28.6139, lon: 77.2090, pincode: '110001' });
@@ -122,8 +130,32 @@ function App() {
     setStep('onboarding');
   };
 
+  const handleDemo = useCallback(async () => {
+    // Pre-populate with demo data and run analysis immediately
+    const demoLocation = { lat: 28.6502, lon: 77.3150, pincode: '110092' }; // Anand Vihar (high AQI)
+    const demoBuilding = {
+      floor: 3, area: 80, window_bedroom: false, window_living: false,
+      window_kitchen: true, exhaust_kitchen: true, exhaust_bathroom: true,
+      purifier_cadr: 300, purifier_zone: 'bedroom', door_open: true,
+      occupancy: 3, cookingFreq: 2, incense: false
+    };
+    const demoProfile = {
+      userId: 'demo_user', hasChildren: true, priceSensitive: true, communityActive: true, canWfh: true
+    };
+    const demoSchedule = [
+      { zone: 'kitchen', activity: 'cooking', start_hour: 8, duration: 1 },
+      { zone: 'kitchen', activity: 'cooking', start_hour: 19, duration: 1.5 }
+    ];
+
+    setLocation(demoLocation);
+    setBuilding(demoBuilding);
+    setProfile(demoProfile);
+    setSchedule(demoSchedule);
+    setStep('dashboard');
+  }, []);
+
   if (step === 'landing') {
-    return <LandingPage onGetStarted={handleLandingComplete} />;
+    return <LandingPage onGetStarted={handleLandingComplete} onDemo={handleDemo} />;
   }
 
   if (step === 'onboarding') {

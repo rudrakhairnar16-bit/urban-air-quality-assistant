@@ -10,10 +10,11 @@ import {
   IconCpu,
   IconBarChart,
   IconLeaf,
-  IconCheck
+  IconCheck,
+  IconPlay
 } from './Icons';
 
-export default function LandingPage({ onGetStarted }) {
+export default function LandingPage({ onGetStarted, onDemo }) {
   // Hero Interactive Smog Scrubber State
   const [smogAqi, setSmogAqi] = useState(320);
 
@@ -374,7 +375,7 @@ export default function LandingPage({ onGetStarted }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <a
             href="https://github.com/rudrakhairnar16-bit/urban-air-quality-assistant"
             target="_blank"
@@ -384,6 +385,13 @@ export default function LandingPage({ onGetStarted }) {
           >
             GitHub
           </a>
+          <button
+            onClick={onDemo}
+            className="btn-glow-secondary"
+            style={{ padding: '0.5rem 1.15rem', fontSize: '0.85rem', gap: '0.4rem' }}
+          >
+            <IconPlay size={14} /> Demo Dashboard
+          </button>
           <button
             onClick={onGetStarted}
             className="btn-glow-primary"
@@ -413,6 +421,9 @@ export default function LandingPage({ onGetStarted }) {
         <div className="hero-actions">
           <button onClick={onGetStarted} className="btn-glow-primary">
             Launch Autonomous Assistant →
+          </button>
+          <button onClick={onDemo} className="btn-glow-secondary" style={{ gap: '0.5rem' }}>
+            <IconPlay size={15} /> Jump to Demo Dashboard
           </button>
           <a href="#simulator" className="btn-glow-secondary">
             Test Smog Simulator ↓
@@ -1008,13 +1019,16 @@ export default function LandingPage({ onGetStarted }) {
             An autonomous GenAI assistant built for PromptWars Virtual Challenge 6 using the Google Antigravity Agent Swarm framework.
           </p>
 
-          <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.8rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', fontSize: '0.8rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <a href="https://github.com/rudrakhairnar16-bit/urban-air-quality-assistant" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
               GitHub Repository
             </a>
             <a href="https://air-quality-assistant.vercel.app" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)' }}>
               Live Production Demo
             </a>
+            <button onClick={onDemo} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>
+              Demo Dashboard
+            </button>
             <button onClick={onGetStarted} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>
               Launch App →
             </button>
