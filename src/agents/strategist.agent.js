@@ -205,7 +205,11 @@ export const strategistAgent = {
     const baseSources = this.buildBaseSources(analysis, location);
     const interventionSources = interventionScenario(baseSources, interventions
       .filter(i => i.category === 'transport')
-      .map(i => ({ source_id: 'traffic_main', reduction_factor: i.impact.pm25_ug / 100, description: i.title })));
+      .map(i => ({
+        source_id: 'traffic_main',
+        reduction_factor: (i.impact?.pm25_ug || 15) / 100,
+        description: i.title || i.id
+      })));
 
     const baseGrid = simulateGrid(baseSources, { wind_speed: 3, wind_dir: 180, stability: 'C' }, location);
     const intvGrid = simulateGrid(interventionSources, { wind_speed: 3, wind_dir: 180, stability: 'C' }, location);
@@ -229,19 +233,26 @@ export const strategistAgent = {
   calculatePersonalImpact(routine, analysis, building) {
     const total = routine.reduce((sum, r) => {
       if (!r.relevant || !r.impact) return sum;
+      const cost = r.impact.cost_monthly !== undefined ? r.impact.cost_monthly : (r.impact.cost_save || 0);
       return {
         co2_kg: sum.co2_kg + (r.impact.co2_kg || 0),
         pm25_ug: sum.pm25_ug + (r.impact.pm25_ug || 0),
-        cost_monthly: sum.cost_monthly + (r.impact.cost_monthly || 0)
+        cost_monthly: sum.cost_monthly + cost,
+        cost_save: sum.cost_save + cost
       };
-    }, { co2_kg: 0, pm25_ug: 0, cost_save: 0 });
+    }, { co2_kg: 0, pm25_ug: 0, cost_monthly: 0, cost_save: 0 });
 
-    const indoorBaseline = analysis.indoor.summary.bedroom.pm25_avg;
+    const indoorBaseline = analysis.indoor?.summary?.bedroom?.pm25_avg || 25;
     const indoorWithActions = Math.max(5, indoorBaseline - total.pm25_ug * 0.3);
 
     return {
       daily: total,
-      weekly: { co2_kg: total.co2_kg * 7, pm25_ug: total.pm25_ug * 7, cost_monthly: total.cost_monthly * 7 },
+      weekly: {
+        co2_kg: total.co2_kg * 7,
+        pm25_ug: total.pm25_ug * 7,
+        cost_monthly: total.cost_monthly * 7,
+        cost_save: total.cost_save * 7
+      },
       indoor_reduction: Math.round((indoorBaseline - indoorWithActions) / indoorBaseline * 100),
       indoor_final: indoorWithActions
     };

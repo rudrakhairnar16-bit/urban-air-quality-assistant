@@ -57,6 +57,10 @@ describe('Antigravity Agents Execution', () => {
     });
     expect(strategyRes.success).toBe(true);
     expect(strategyRes.strategy.routine.length).toBeGreaterThan(0);
+    expect(isNaN(strategyRes.strategy.personalImpact.daily.cost_monthly)).toBe(false);
+    expect(isNaN(strategyRes.strategy.personalImpact.daily.cost_save)).toBe(false);
+    expect(isNaN(strategyRes.strategy.personalImpact.daily.pm25_ug)).toBe(false);
+    expect(isNaN(strategyRes.strategy.personalImpact.daily.co2_kg)).toBe(false);
     expect(localStorageMock.getItem('aq_strategy')).toBeDefined();
   });
 

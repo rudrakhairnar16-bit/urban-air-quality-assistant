@@ -9,6 +9,7 @@ import AgentLog from './components/AgentLog';
 import SourceAttribution from './components/SourceAttribution';
 import Onboarding from './components/Onboarding';
 import LandingPage from './components/LandingPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import { forecastAQI } from './core/aqi-forecast.js';
 import { attributeSources } from './core/source-attribution.js';
 import { simulateIndoor, optimizeVentilation } from './core/indoor-physics.js';
@@ -184,148 +185,151 @@ function App() {
         </div>
       </div>
 
-      {/* VIEW MODE 1: TABBED INSPECTOR (Clean 2-Column with Tabs) */}
-      {viewMode === 'tabs' && (
-        <main className="main">
-          {/* Left Column: Hero AQI & Mission Swarm */}
-          <aside>
-            <AQIDashboard
-              analysis={analysis}
-              loading={loading}
-              error={error}
-              onRefresh={runAnalysis}
-            />
-            <AgentLog />
-          </aside>
+      {/* Telemetry Error Boundary Container */}
+      <ErrorBoundary onReset={runAnalysis}>
+        {/* VIEW MODE 1: TABBED INSPECTOR (Clean 2-Column with Tabs) */}
+        {viewMode === 'tabs' && (
+          <main className="main">
+            {/* Left Column: Hero AQI & Mission Swarm */}
+            <aside>
+              <AQIDashboard
+                analysis={analysis}
+                loading={loading}
+                error={error}
+                onRefresh={runAnalysis}
+              />
+              <AgentLog />
+            </aside>
 
-          {/* Right Column: iOS Segmented Tabs + Active Section */}
-          <section>
-            <div className="ios-segmented-control" style={{ width: '100%', overflowX: 'auto' }}>
-              <button
-                type="button"
-                className={`ios-segment-btn ${activeTab === 'routine' ? 'active' : ''}`}
-                onClick={() => setActiveTab('routine')}
-              >
-                <IconActivity size={14} /> Routine & Actions
-              </button>
-              <button
-                type="button"
-                className={`ios-segment-btn ${activeTab === 'indoor' ? 'active' : ''}`}
-                onClick={() => setActiveTab('indoor')}
-              >
-                <IconHome size={14} /> Spatial Sanctuary
-              </button>
-              <button
-                type="button"
-                className={`ios-segment-btn ${activeTab === 'impact' ? 'active' : ''}`}
-                onClick={() => setActiveTab('impact')}
-              >
-                <IconBarChart size={14} /> Impact Telemetry
-              </button>
-              <button
-                type="button"
-                className={`ios-segment-btn ${activeTab === 'sources' ? 'active' : ''}`}
-                onClick={() => setActiveTab('sources')}
-              >
-                <IconLayers size={14} /> CMB Attribution
-              </button>
-              <button
-                type="button"
-                className={`ios-segment-btn ${activeTab === 'community' ? 'active' : ''}`}
-                onClick={() => setActiveTab('community')}
-              >
-                <IconMapPin size={14} /> Community Mesh
-              </button>
+            {/* Right Column: iOS Segmented Tabs + Active Section */}
+            <section>
+              <div className="ios-segmented-control" style={{ width: '100%', overflowX: 'auto' }}>
+                <button
+                  type="button"
+                  className={`ios-segment-btn ${activeTab === 'routine' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('routine')}
+                >
+                  <IconActivity size={14} /> Routine & Actions
+                </button>
+                <button
+                  type="button"
+                  className={`ios-segment-btn ${activeTab === 'indoor' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('indoor')}
+                >
+                  <IconHome size={14} /> Spatial Sanctuary
+                </button>
+                <button
+                  type="button"
+                  className={`ios-segment-btn ${activeTab === 'impact' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('impact')}
+                >
+                  <IconBarChart size={14} /> Impact Telemetry
+                </button>
+                <button
+                  type="button"
+                  className={`ios-segment-btn ${activeTab === 'sources' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('sources')}
+                >
+                  <IconLayers size={14} /> CMB Attribution
+                </button>
+                <button
+                  type="button"
+                  className={`ios-segment-btn ${activeTab === 'community' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('community')}
+                >
+                  <IconMapPin size={14} /> Community Mesh
+                </button>
+              </div>
+
+              {activeTab === 'routine' && (
+                <RoutinePanel
+                  routine={strategy?.routine}
+                  nudges={strategy?.nudges}
+                  onLogActual={(val) => {
+                    setIndoorActual(val);
+                    console.info('Sensor calibrated PM2.5:', val);
+                  }}
+                />
+              )}
+              {activeTab === 'indoor' && (
+                <IndoorModel
+                  indoor={analysis?.indoor}
+                  building={building}
+                  onBuildingChange={setBuilding}
+                />
+              )}
+              {activeTab === 'impact' && (
+                <ImpactTracker
+                  impact={strategy?.personalImpact}
+                  neighborhood={strategy?.neighborhoodImpact}
+                  actualReading={indoorActual}
+                />
+              )}
+              {activeTab === 'sources' && (
+                <SourceAttribution attribution={analysis?.attribution} />
+              )}
+              {activeTab === 'community' && (
+                <CommunityMap
+                  neighborhood={strategy?.neighborhoodImpact}
+                  location={location}
+                />
+              )}
+            </section>
+          </main>
+        )}
+
+        {/* VIEW MODE 2: MASTER COMMAND CENTER (Panoramic 12-Column Bento Grid) */}
+        {viewMode === 'bento' && (
+          <main className="bento-grid">
+            {/* Row 1: Hero AQI (Col 7) + Mission Swarm (Col 5) */}
+            <div className="col-span-8">
+              <AQIDashboard
+                analysis={analysis}
+                loading={loading}
+                error={error}
+                onRefresh={runAnalysis}
+              />
+            </div>
+            <div className="col-span-4">
+              <AgentLog />
             </div>
 
-            {activeTab === 'routine' && (
-              <RoutinePanel
-                routine={strategy?.routine}
-                nudges={strategy?.nudges}
-                onLogActual={(val) => {
-                  setIndoorActual(val);
-                  console.info('Sensor calibrated PM2.5:', val);
-                }}
-              />
-            )}
-            {activeTab === 'indoor' && (
+            {/* Row 2: 4-Zone Sanctuary (Col 6) + Routine Feed (Col 6) */}
+            <div className="col-span-6">
               <IndoorModel
                 indoor={analysis?.indoor}
                 building={building}
                 onBuildingChange={setBuilding}
               />
-            )}
-            {activeTab === 'impact' && (
+            </div>
+            <div className="col-span-6">
+              <RoutinePanel
+                routine={strategy?.routine}
+                nudges={strategy?.nudges}
+                onLogActual={(val) => setIndoorActual(val)}
+              />
+            </div>
+
+            {/* Row 3: Impact (Col 4) + CMB Attribution (Col 4) + Community Map (Col 4) */}
+            <div className="col-span-4">
               <ImpactTracker
                 impact={strategy?.personalImpact}
                 neighborhood={strategy?.neighborhoodImpact}
                 actualReading={indoorActual}
               />
-            )}
-            {activeTab === 'sources' && (
+            </div>
+            <div className="col-span-4">
               <SourceAttribution attribution={analysis?.attribution} />
-            )}
-            {activeTab === 'community' && (
+            </div>
+            <div className="col-span-4">
               <CommunityMap
                 neighborhood={strategy?.neighborhoodImpact}
                 location={location}
               />
-            )}
-          </section>
-        </main>
-      )}
-
-      {/* VIEW MODE 2: MASTER COMMAND CENTER (Panoramic 12-Column Bento Grid) */}
-      {viewMode === 'bento' && (
-        <main className="bento-grid">
-          {/* Row 1: Hero AQI (Col 7) + Mission Swarm (Col 5) */}
-          <div className="col-span-8">
-            <AQIDashboard
-              analysis={analysis}
-              loading={loading}
-              error={error}
-              onRefresh={runAnalysis}
-            />
-          </div>
-          <div className="col-span-4">
-            <AgentLog />
-          </div>
-
-          {/* Row 2: 4-Zone Sanctuary (Col 6) + Routine Feed (Col 6) */}
-          <div className="col-span-6">
-            <IndoorModel
-              indoor={analysis?.indoor}
-              building={building}
-              onBuildingChange={setBuilding}
-            />
-          </div>
-          <div className="col-span-6">
-            <RoutinePanel
-              routine={strategy?.routine}
-              nudges={strategy?.nudges}
-              onLogActual={(val) => setIndoorActual(val)}
-            />
-          </div>
-
-          {/* Row 3: Impact (Col 4) + CMB Attribution (Col 4) + Community Map (Col 4) */}
-          <div className="col-span-4">
-            <ImpactTracker
-              impact={strategy?.personalImpact}
-              neighborhood={strategy?.neighborhoodImpact}
-              actualReading={indoorActual}
-            />
-          </div>
-          <div className="col-span-4">
-            <SourceAttribution attribution={analysis?.attribution} />
-          </div>
-          <div className="col-span-4">
-            <CommunityMap
-              neighborhood={strategy?.neighborhoodImpact}
-              location={location}
-            />
-          </div>
-        </main>
-      )}
+            </div>
+          </main>
+        )}
+      </ErrorBoundary>
 
       {/* Apple Specular Glass Footer */}
       <footer className="footer">

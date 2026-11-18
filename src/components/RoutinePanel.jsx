@@ -2,6 +2,23 @@ import { useState } from 'react';
 import { createNudgeEngine } from '../core/behavioral-engine.js';
 import { IconActivity, IconCheck, IconClock, IconSliders } from './Icons';
 
+function formatImpact(impact) {
+  if (!impact) return null;
+  if (typeof impact === 'string') return impact;
+  if (typeof impact === 'object') {
+    const parts = [];
+    if (impact.pm25_ug) parts.push(`-${impact.pm25_ug} µg/m³`);
+    if (impact.co2_kg) parts.push(`-${impact.co2_kg} kg CO₂`);
+    if (impact.cost_monthly !== undefined && impact.cost_monthly !== 0) {
+      parts.push(`${impact.cost_monthly > 0 ? '+' : ''}₹${impact.cost_monthly}/mo`);
+    } else if (impact.cost_save !== undefined && impact.cost_save !== 0) {
+      parts.push(`${impact.cost_save > 0 ? '+' : ''}₹${impact.cost_save}/mo`);
+    }
+    if (parts.length > 0) return parts.join(' • ');
+  }
+  return 'Active';
+}
+
 export default function RoutinePanel({ routine, nudges, onLogActual }) {
   const [completed, setCompleted] = useState(new Set());
   const [bedroomInput, setBedroomInput] = useState('');
@@ -149,7 +166,7 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
                   borderRadius: 'var(--radius-capsule)',
                   border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.2)' : 'rgba(34, 211, 238, 0.2)'}`
                 }}>
-                  {item.impact}
+                  {formatImpact(item.impact)}
                 </span>
               )}
             </div>
@@ -170,10 +187,10 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
             borderRadius: 'var(--radius-md)'
           }}>
             <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-              {nudges[0].title}
+              {nudges[0].title || (nudges[0].id ? nudges[0].id.replace(/_/g, ' ').toUpperCase() : 'Adaptive Intervention')}
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              {nudges[0].description || nudges[0].action}
+              {typeof nudges[0].description === 'string' ? nudges[0].description : (nudges[0].action || `Framed for ${nudges[0].framing || 'compliance'} based on behavioral priors.`)}
             </div>
           </div>
         </div>
