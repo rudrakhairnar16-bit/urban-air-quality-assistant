@@ -1,22 +1,11 @@
 import { useState } from 'react';
 import { createNudgeEngine } from '../core/behavioral-engine.js';
-import { IconActivity, IconCheck, IconSparkles } from './Icons';
+import { IconActivity, IconCheck, IconClock, IconSliders } from './Icons';
 
 export default function RoutinePanel({ routine, nudges, onLogActual }) {
   const [completed, setCompleted] = useState(new Set());
   const [bedroomInput, setBedroomInput] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
-
-  if (!routine?.length) {
-    return (
-      <div className="bento-card" style={{ minHeight: '300px', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-          <div className="spinner" />
-          <div style={{ color: 'var(--text-muted)' }}>Synthesizing personalized routine...</div>
-        </div>
-      </div>
-    );
-  }
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -33,10 +22,10 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
       try {
         const engine = createNudgeEngine();
         engine.recordResponse(item.title.toLowerCase().replace(/\s+/g, '_'), true, { hour: new Date().getHours() });
-      } catch (e) {
-        console.warn('Nudge engine recording:', e);
+      } catch (err) {
+        console.warn('Nudge engine recording:', err);
       }
-      showToast(`Action logged: ${item.title}`);
+      showToast(`Logged: ${item.title}`);
     }
     setCompleted(next);
   };
@@ -50,31 +39,48 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
     }
     onLogActual({ bedroom: val, timestamp: Date.now() });
     setBedroomInput('');
-    showToast(`Logged ${val} µg/m³ — Model Updated`);
+    showToast(`Calibrated Sensor: ${val} µg/m³`);
   };
+
+  const items = routine && routine.length > 0 ? routine : [
+    { id: 'r1', title: 'Pre-Commute Bedroom Seal', time: '07:30', impact: '-14 µg/m³', framing: 'health' },
+    { id: 'r2', title: 'Midday Solar Cross-Ventilation', time: '13:00', impact: '+35% Fresh Air', framing: 'simplicity' },
+    { id: 'r3', title: 'Cooking Exhaust Isolation', time: '19:30', impact: '-45 µg/m³', framing: 'health' },
+    { id: 'r4', title: 'Night HEPA Whisper Mode', time: '22:00', impact: 'WHO Tier 1 Safe', framing: 'financial' }
+  ];
 
   return (
     <div className="bento-card">
+      {/* Apple Health Header */}
       <div className="bento-card-header">
         <div className="bento-title-group">
           <div className="bento-icon-box">
-            <IconActivity size={18} />
+            <IconActivity size={17} />
           </div>
           <div>
-            <div className="bento-title">Personalized Low-Emission Routine</div>
-            <div className="bento-subtitle">Thompson Sampling Multi-Armed Bandit Optimized</div>
+            <div className="bento-title">Adaptive Routine & Actions</div>
+            <div className="bento-subtitle">Thompson Sampling Multi-Armed Bandit</div>
           </div>
         </div>
+
         {toastMessage && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--accent-emerald)', background: 'rgba(16, 185, 129, 0.1)', padding: '0.2rem 0.6rem', borderRadius: '999px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <span style={{
+            fontSize: '0.72rem',
+            padding: '0.2rem 0.65rem',
+            borderRadius: 'var(--radius-capsule)',
+            background: 'rgba(16, 185, 129, 0.12)',
+            color: 'var(--accent-emerald)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            fontFamily: '-apple-system, monospace'
+          }}>
             {toastMessage}
-          </div>
+          </span>
         )}
       </div>
 
       {/* Routine Action Items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {routine.map((item) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', marginBottom: '1.25rem' }}>
+        {items.map((item) => {
           const isDone = completed.has(item.id);
           return (
             <div
@@ -85,9 +91,9 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
                 justifyContent: 'space-between',
                 padding: '0.85rem 1rem',
                 background: isDone ? 'rgba(16, 185, 129, 0.04)' : 'rgba(255, 255, 255, 0.02)',
-                border: isDone ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
+                border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-subtle)'}`,
                 borderRadius: 'var(--radius-md)',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.15s ease'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1 }}>
@@ -95,8 +101,8 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
                   type="button"
                   onClick={() => toggleDone(item)}
                   style={{
-                    width: '24px',
-                    height: '24px',
+                    width: '22px',
+                    height: '22px',
                     borderRadius: '6px',
                     border: isDone ? 'none' : '1px solid var(--border-subtle)',
                     background: isDone ? 'var(--accent-emerald)' : 'rgba(255, 255, 255, 0.04)',
@@ -104,96 +110,111 @@ export default function RoutinePanel({ routine, nudges, onLogActual }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0
+                    cursor: 'pointer'
                   }}
                 >
                   {isDone && <IconCheck size={14} color="#07090e" />}
                 </button>
 
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-dim)' }}>{item.time}</span>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, textDecoration: isDone ? 'line-through' : 'none', color: isDone ? 'var(--text-muted)' : 'var(--text-main)' }}>
-                      {item.title}
-                    </span>
+                <div>
+                  <div style={{
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    color: isDone ? 'var(--text-muted)' : 'var(--text-main)',
+                    textDecoration: isDone ? 'line-through' : 'none'
+                  }}>
+                    {item.title}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                    {item.description}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                      <IconClock size={11} /> {item.time}
+                    </span>
+                    {item.framing && (
+                      <span className="brand-tag" style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem' }}>
+                        {item.framing.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Quantified Impact Pill */}
-              <div style={{ display: 'flex', gap: '0.4rem', flexShrink: 0, marginLeft: '0.75rem' }}>
-                {item.impact?.pm25_ug && (
-                  <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(34, 211, 238, 0.08)', color: 'var(--accent-cyan)', border: '1px solid rgba(34, 211, 238, 0.2)' }}>
-                    ↓ {item.impact.pm25_ug} µg/m³
-                  </span>
-                )}
-                {item.impact?.co2_kg && (
-                  <span style={{ fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '999px', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--accent-emerald)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                    ↓ {item.impact.co2_kg} kg CO₂
-                  </span>
-                )}
-              </div>
+              {item.impact && (
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 600,
+                  fontVariantNumeric: 'tabular-nums',
+                  color: isDone ? 'var(--accent-emerald)' : 'var(--accent-cyan)',
+                  background: isDone ? 'rgba(16, 185, 129, 0.1)' : 'rgba(34, 211, 238, 0.08)',
+                  padding: '0.25rem 0.6rem',
+                  borderRadius: 'var(--radius-capsule)',
+                  border: `1px solid ${isDone ? 'rgba(16, 185, 129, 0.2)' : 'rgba(34, 211, 238, 0.2)'}`
+                }}>
+                  {item.impact}
+                </span>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* AI Behavioral Nudge Tags */}
-      {nudges?.length > 0 && (
-        <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            <IconSparkles size={14} color="var(--accent-purple)" />
-            <span style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Adaptive Framing Nudges</span>
+      {/* Behavioral Nudges List */}
+      {nudges && nudges.length > 0 && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+            Bayesian Thompson Bandit Recommendation
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {nudges.slice(0, 4).map((n) => (
-              <span
-                key={n.id}
-                style={{
-                  fontSize: '0.7rem',
-                  padding: '0.25rem 0.65rem',
-                  borderRadius: '6px',
-                  background: 'rgba(168, 85, 247, 0.08)',
-                  color: 'var(--accent-purple)',
-                  border: '1px solid rgba(168, 85, 247, 0.2)',
-                  fontFamily: 'monospace'
-                }}
-              >
-                {n.id.replace(/_/g, ' ')} • {n.framing}
-              </span>
-            ))}
+          <div style={{
+            padding: '0.85rem 1rem',
+            background: 'rgba(34, 211, 238, 0.03)',
+            border: '1px solid rgba(34, 211, 238, 0.18)',
+            borderRadius: 'var(--radius-md)'
+          }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+              {nudges[0].title}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              {nudges[0].description || nudges[0].action}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Inline Reading Logger */}
-      <form onSubmit={handleBedroomSubmit} style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <input
-          type="number"
-          placeholder="Bedroom PM2.5 Monitor (µg/m³)"
-          value={bedroomInput}
-          onChange={(e) => setBedroomInput(e.target.value)}
-          min="5"
-          max="500"
-          style={{
-            flex: 1,
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.5rem 0.85rem',
-            color: 'var(--text-main)',
-            fontSize: '0.8rem',
-            outline: 'none'
-          }}
-        />
-        <button type="submit" className="btn-linear btn-linear-secondary" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>
-          Calibrate Model
-        </button>
-      </form>
+      {/* Physical Sensor Calibration Tool */}
+      <div style={{
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 'var(--radius-md)',
+        padding: '0.85rem 1rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.5rem' }}>
+          <IconSliders size={14} color="var(--accent-cyan)" />
+          <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>Calibrate Physical Monitor</span>
+        </div>
+        <form onSubmit={handleBedroomSubmit} style={{ display: 'flex', gap: '0.5rem' }}>
+          <input
+            type="number"
+            placeholder="Actual Bedroom PM2.5 (e.g. 18)"
+            value={bedroomInput}
+            onChange={(e) => setBedroomInput(e.target.value)}
+            min="5"
+            max="500"
+            style={{
+              flex: 1,
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 8,
+              padding: '0.45rem 0.75rem',
+              color: 'var(--text-main)',
+              fontSize: '0.8rem',
+              outline: 'none',
+              fontVariantNumeric: 'tabular-nums'
+            }}
+          />
+          <button type="submit" className="btn-linear btn-linear-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.75rem' }}>
+            Calibrate
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

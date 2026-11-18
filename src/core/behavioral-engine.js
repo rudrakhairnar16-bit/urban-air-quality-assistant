@@ -121,17 +121,17 @@ export function createNudgeEngine(userId = 'local') {
 
   function estimateImpact(intervention, context) {
     const impacts = {
-      commute_metro: { co2_kg: 2.3, pm25_ug: 15, cost_save: 2400 },
-      commute_carpool: { co2_kg: 1.1, pm25_ug: 7, cost_save: 1200 },
-      commute_wfh: { co2_kg: 3.8, pm25_ug: 25, cost_save: 0 },
-      cooking_vent: { co2_kg: 0, pm25_ug: 40, cost_save: 0 },
-      purifier_on: { co2_kg: 0, pm25_ug: 60, cost_save: -150 },
-      window_timing: { co2_kg: 0, pm25_ug: 20, cost_save: 0 },
-      corsi_build: { co2_kg: 0, pm25_ug: 80, cost_save: -3000 },
-      waste_segregate: { co2_kg: 0.5, pm25_ug: 5, cost_save: 0 },
-      report_burning: { co2_kg: 0, pm25_ug: 10, cost_save: 0 }
+      commute_metro: { co2_kg: 2.3, pm25_ug: 15, cost_monthly: 2400 },
+      commute_carpool: { co2_kg: 1.1, pm25_ug: 7, cost_monthly: 1200 },
+      commute_wfh: { co2_kg: 3.8, pm25_ug: 25, cost_monthly: 0 },
+      cooking_vent: { co2_kg: 0, pm25_ug: 40, cost_monthly: 0 },
+      purifier_on: { co2_kg: 0, pm25_ug: 60, cost_monthly: -150 },
+      window_timing: { co2_kg: 0, pm25_ug: 20, cost_monthly: 0 },
+      corsi_build: { co2_kg: 0, pm25_ug: 80, cost_monthly: -250 },
+      waste_segregate: { co2_kg: 0.5, pm25_ug: 5, cost_monthly: 0 },
+      report_burning: { co2_kg: 0, pm25_ug: 10, cost_monthly: 0 }
     };
-    return impacts[intervention.id] || { co2_kg: 0, pm25_ug: 0, cost_save: 0 };
+    return impacts[intervention.id] || { co2_kg: 0, pm25_ug: 0, cost_monthly: 0 };
   }
 
   function recordResponse(interventionId, accepted, context) {

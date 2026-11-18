@@ -232,7 +232,7 @@ export const strategistAgent = {
       return {
         co2_kg: sum.co2_kg + (r.impact.co2_kg || 0),
         pm25_ug: sum.pm25_ug + (r.impact.pm25_ug || 0),
-        cost_save: sum.cost_save + (r.impact.cost_save || 0)
+        cost_monthly: sum.cost_monthly + (r.impact.cost_monthly || 0)
       };
     }, { co2_kg: 0, pm25_ug: 0, cost_save: 0 });
 
@@ -241,7 +241,7 @@ export const strategistAgent = {
 
     return {
       daily: total,
-      weekly: { co2_kg: total.co2_kg * 7, pm25_ug: total.pm25_ug * 7, cost_save: total.cost_save * 7 },
+      weekly: { co2_kg: total.co2_kg * 7, pm25_ug: total.pm25_ug * 7, cost_monthly: total.cost_monthly * 7 },
       indoor_reduction: Math.round((indoorBaseline - indoorWithActions) / indoorBaseline * 100),
       indoor_final: indoorWithActions
     };
